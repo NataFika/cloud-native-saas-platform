@@ -5,3 +5,10 @@ module "vpc" {
   environment  = var.environment
   vpc_cidr     = var.vpc_cidr
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
