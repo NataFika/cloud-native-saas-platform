@@ -1,0 +1,164 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.dashboard {
+  min-height: 100vh;
+  padding: 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 14px;
+}
+
+.hero h1 {
+  font-size: 52px;
+  margin: 12px 0;
+}
+
+.hero p {
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 32px 0;
+}
+
+.stats div {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 28px;
+  min-width: 180px;
+  text-align: center;
+}
+
+.stats span {
+  display: block;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.stats strong {
+  font-size: 28px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr auto auto;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 32px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #475569;
+  font-weight: 600;
+}
+
+input,
+select {
+  height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  font-size: 15px;
+}
+
+button {
+  height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  background: #0f172a;
+  color: white;
+}
+
+button:last-child {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  position: relative;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.score {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  background: #0f172a;
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: bold;
+}
+
+.card h2 {
+  margin: 0 50px 10px 0;
+}
+
+.card p,
+.card small {
+  color: #64748b;
+}
+
+.card strong,
+.card span,
+.card small {
+  display: block;
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .hero h1 {
+    font-size: 38px;
+  }
+
+  .stats {
+    flex-direction: column;
+  }
+}
