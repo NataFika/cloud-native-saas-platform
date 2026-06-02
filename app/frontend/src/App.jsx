@@ -3,7 +3,9 @@ import "./App.css";
 
 function App() {
   const [influencers, setInfluencers] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const [searchInput, setSearchInput] = useState("");
+
   const [filters, setFilters] = useState({
     search: "",
     platform: "All",
@@ -11,22 +13,30 @@ function App() {
     sortBy: "score",
   });
 
-  const fetchInfluencers = () => {
-    const params = new URLSearchParams({
-      search: filters.search,
-      platform: filters.platform,
-      niche: filters.niche,
-      sort_by: filters.sortBy,
-    });
+ const fetchInfluencers = () => {
+  const params = new URLSearchParams({
+    search: filters.search,
+    platform: filters.platform,
+    niche: filters.niche,
+    sort_by: filters.sortBy,
+  });
 
-    fetch(`http://127.0.0.1:8080/api/influencers?${params}`)
-      .then((res) => res.json())
-      .then((data) => setInfluencers(data))
-      .catch((err) => console.error("API error:", err));
-  };
+  fetch(`http://a0858ec5e2142481788fbf97d57b4f8e-217161621.us-east-1.elb.amazonaws.com/api/influencers?${params}`)
+    .then((res) => res.json())
+    .then((data) => setInfluencers(data))
+    .catch((err) => console.error("API error:", err));
+};
+
+const fetchMetrics = () => {
+  fetch("http://a0858ec5e2142481788fbf97d57b4f8e-217161621.us-east-1.elb.amazonaws.com/api/metrics")
+    .then((res) => res.json())
+    .then((data) => setMetrics(data))
+    .catch((err) => console.error("Metrics API error:", err));
+};
 
   useEffect(() => {
     fetchInfluencers();
+    fetchMetrics();
   }, [filters]);
 
   const handleSearch = () => {
@@ -59,12 +69,28 @@ function App() {
 
       <section className="stats">
         <div>
-          <span>Total Results</span>
-          <strong>{influencers.length}</strong>
+          <span>Total Influencers</span>
+          <strong>{metrics?.total_influencers || 0}</strong>
         </div>
         <div>
-          <span>Top Match Score</span>
-          <strong>{influencers[0]?.score || 0}</strong>
+          <span>Total Reach</span>
+          <strong>{metrics?.total_reach?.toLocaleString() || 0}</strong>
+        </div>
+        <div>
+          <span>Avg Engagement</span>
+          <strong>{metrics?.average_engagement || 0}%</strong>
+        </div>
+        <div>
+          <span>Avg Price</span>
+          <strong>${metrics?.average_price?.toLocaleString() || 0}</strong>
+        </div>
+        <div>
+          <span>Top Platform</span>
+          <strong>{metrics?.top_platform || "-"}</strong>
+        </div>
+        <div>
+          <span>Top Niche</span>
+          <strong>{metrics?.top_niche || "-"}</strong>
         </div>
       </section>
 
@@ -74,7 +100,7 @@ function App() {
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Name, niche, or location"
+            placeholder="Name, niche, location, or all"
           />
         </label>
 
@@ -130,6 +156,11 @@ function App() {
 
         <button onClick={handleSearch}>Search</button>
         <button onClick={handleReset}>Reset</button>
+      </section>
+
+      <section className="results-header">
+        <h2>Influencer Results</h2>
+        <p>{influencers.length} profiles found</p>
       </section>
 
       <section className="cards">

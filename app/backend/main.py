@@ -1,5 +1,23 @@
-from fastapi import FastAPI, Query
+import os
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import create_engine, Column, Integer, String, Float
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "influencers")
+DB_USER = os.getenv("DB_USER", "appuser")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "ChangeMe12345!")
+
+DATABASE_URL = (
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+
+Base = declarative_base()
 
 app = FastAPI(title="Influencer Analytics API")
 
@@ -11,7 +29,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-influencers = [
+
+class Influencer(Base):
+    __tablename__ = "influencers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    platform = Column(String)
+    niche = Column(String)
+    followers = Column(Integer)
+    engagement_rate = Column(Float)
+    location = Column(String)
+    avg_views = Column(Integer)
+    price = Column(Integer)
+    score = Column(Integer)
+
+
+seed_data = [
     {"id": 1, "name": "Sophia Lee", "platform": "Instagram", "niche": "Beauty", "followers": 120000, "engagement_rate": 5.8, "location": "Los Angeles", "avg_views": 45000, "price": 1200, "score": 91},
     {"id": 2, "name": "Mia Carter", "platform": "TikTok", "niche": "Lifestyle", "followers": 450000, "engagement_rate": 7.2, "location": "New York", "avg_views": 180000, "price": 3500, "score": 94},
     {"id": 3, "name": "Emma Brooks", "platform": "YouTube", "niche": "Fitness", "followers": 89000, "engagement_rate": 4.1, "location": "Miami", "avg_views": 30000, "price": 900, "score": 78},
@@ -24,9 +58,42 @@ influencers = [
     {"id": 10, "name": "Grace Miller", "platform": "Instagram", "niche": "Lifestyle", "followers": 54000, "engagement_rate": 9.1, "location": "Los Angeles", "avg_views": 25000, "price": 700, "score": 84},
 ]
 
+
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        existing_count = db.query(Influencer).count()
+
+        if existing_count == 0:
+            for item in seed_data:
+                db.add(Influencer(**item))
+            db.commit()
+    finally:
+        db.close()
+
+
+def influencer_to_dict(item):
+    return {
+        "id": item.id,
+        "name": item.name,
+        "platform": item.platform,
+        "niche": item.niche,
+        "followers": item.followers,
+        "engagement_rate": item.engagement_rate,
+        "location": item.location,
+        "avg_views": item.avg_views,
+        "price": item.price,
+        "score": item.score,
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
 
 @app.get("/api/influencers")
 def get_influencers(
@@ -35,32 +102,85 @@ def get_influencers(
     niche: str = "All",
     sort_by: str = "score",
 ):
-    data = influencers.copy()
+    db = SessionLocal()
+    try:
+        query = db.query(Influencer)
 
-    if search and search.lower() != "all":
-        data = [
-            item for item in data
-            if search.lower() in item["name"].lower()
-            or search.lower() in item["niche"].lower()
-            or search.lower() in item["location"].lower()
-        ]
+        if search and search.lower() != "all":
+            search_term = f"%{search}%"
+            query = query.filter(
+                Influencer.name.ilike(search_term)
+                | Influencer.niche.ilike(search_term)
+                | Influencer.location.ilike(search_term)
+            )
 
-    if platform != "All":
-        data = [item for item in data if item["platform"] == platform]
+        if platform != "All":
+            query = query.filter(Influencer.platform == platform)
 
-    if niche != "All":
-        data = [item for item in data if item["niche"] == niche]
+        if niche != "All":
+            query = query.filter(Influencer.niche == niche)
 
-    if sort_by in ["followers", "engagement_rate", "avg_views", "price", "score"]:
-        data = sorted(data, key=lambda x: x[sort_by], reverse=True)
+        allowed_sort_fields = {
+            "followers": Influencer.followers,
+            "engagement_rate": Influencer.engagement_rate,
+            "avg_views": Influencer.avg_views,
+            "price": Influencer.price,
+            "score": Influencer.score,
+        }
 
-    return data
+        sort_column = allowed_sort_fields.get(sort_by, Influencer.score)
+        query = query.order_by(sort_column.desc())
+
+        return [influencer_to_dict(item) for item in query.all()]
+    finally:
+        db.close()
+
+
+@app.get("/api/platforms")
+def get_platforms():
+    db = SessionLocal()
+    try:
+        platforms = db.query(Influencer.platform).distinct().all()
+        return sorted([item[0] for item in platforms])
+    finally:
+        db.close()
+
+
+@app.get("/api/niches")
+def get_niches():
+    db = SessionLocal()
+    try:
+        niches = db.query(Influencer.niche).distinct().all()
+        return sorted([item[0] for item in niches])
+    finally:
+        db.close()
+
 
 @app.get("/api/metrics")
 def get_metrics():
-    return {
-        "total_influencers": len(influencers),
-        "average_engagement": round(sum(i["engagement_rate"] for i in influencers) / len(influencers), 2),
-        "top_platform": "TikTok",
-        "top_niche": "Beauty",
-    }
+    db = SessionLocal()
+    try:
+        data = db.query(Influencer).all()
+
+        total_reach = sum(i.followers for i in data)
+        average_engagement = round(
+            sum(i.engagement_rate for i in data) / len(data), 2
+        )
+        average_price = round(sum(i.price for i in data) / len(data), 2)
+
+        platforms = [i.platform for i in data]
+        niches = [i.niche for i in data]
+
+        top_platform = max(set(platforms), key=platforms.count)
+        top_niche = max(set(niches), key=niches.count)
+
+        return {
+            "total_influencers": len(data),
+            "total_reach": total_reach,
+            "average_engagement": average_engagement,
+            "average_price": average_price,
+            "top_platform": top_platform,
+            "top_niche": top_niche,
+        }
+    finally:
+        db.close()

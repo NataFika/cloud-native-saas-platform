@@ -17,3 +17,6 @@ spec:
           image: 871773732682.dkr.ecr.us-east-1.amazonaws.com/cloud-native-saas-dev-backend:latest
           ports:
             - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: db-secret
