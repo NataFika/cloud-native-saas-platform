@@ -157,6 +157,11 @@ Add screenshots of:
 
 ---
 
+## Architecture Diagram
+
+See: [Architecture Diagram](diagrams/architecture.md)
+---
+
 ## Author
 
 Natalia Finkovskaya
