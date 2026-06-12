@@ -1,5 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 import "./App.css";
+
+const API_BASE_URL =
+  "http://a0858ec5e2142481788fbf97d57b4f8e-217161621.us-east-1.elb.amazonaws.com";
 
 function App() {
   const [influencers, setInfluencers] = useState([]);
@@ -13,26 +25,26 @@ function App() {
     sortBy: "score",
   });
 
- const fetchInfluencers = () => {
-  const params = new URLSearchParams({
-    search: filters.search,
-    platform: filters.platform,
-    niche: filters.niche,
-    sort_by: filters.sortBy,
-  });
+  const fetchInfluencers = () => {
+    const params = new URLSearchParams({
+      search: filters.search,
+      platform: filters.platform,
+      niche: filters.niche,
+      sort_by: filters.sortBy,
+    });
 
-  fetch(`http://a0858ec5e2142481788fbf97d57b4f8e-217161621.us-east-1.elb.amazonaws.com/api/influencers?${params}`)
-    .then((res) => res.json())
-    .then((data) => setInfluencers(data))
-    .catch((err) => console.error("API error:", err));
-};
+    fetch(`${API_BASE_URL}/api/influencers?${params}`)
+      .then((res) => res.json())
+      .then((data) => setInfluencers(data))
+      .catch((err) => console.error("API error:", err));
+  };
 
-const fetchMetrics = () => {
-  fetch("http://a0858ec5e2142481788fbf97d57b4f8e-217161621.us-east-1.elb.amazonaws.com/api/metrics")
-    .then((res) => res.json())
-    .then((data) => setMetrics(data))
-    .catch((err) => console.error("Metrics API error:", err));
-};
+  const fetchMetrics = () => {
+    fetch(`${API_BASE_URL}/api/metrics`)
+      .then((res) => res.json())
+      .then((data) => setMetrics(data))
+      .catch((err) => console.error("Metrics API error:", err));
+  };
 
   useEffect(() => {
     fetchInfluencers();
@@ -56,14 +68,52 @@ const fetchMetrics = () => {
     });
   };
 
+  const followersByPlatform = useMemo(() => {
+    const result = {};
+
+    influencers.forEach((item) => {
+      result[item.platform] = (result[item.platform] || 0) + item.followers;
+    });
+
+    return Object.entries(result).map(([platform, followers]) => ({
+      platform,
+      followers,
+    }));
+  }, [influencers]);
+
+  const engagementByNiche = useMemo(() => {
+    const result = {};
+
+    influencers.forEach((item) => {
+      if (!result[item.niche]) {
+        result[item.niche] = { total: 0, count: 0 };
+      }
+
+      result[item.niche].total += item.engagement_rate;
+      result[item.niche].count += 1;
+    });
+
+    return Object.entries(result).map(([niche, value]) => ({
+      niche,
+      engagement: Number((value.total / value.count).toFixed(2)),
+    }));
+  }, [influencers]);
+
+  const priceByCreator = useMemo(() => {
+    return influencers.slice(0, 8).map((item) => ({
+      name: item.name.split(" ")[0],
+      price: item.price,
+    }));
+  }, [influencers]);
+
   return (
     <main className="dashboard">
       <section className="hero">
         <p className="eyebrow">Cloud-Native SaaS Demo</p>
         <h1>Influencer Analytics Dashboard</h1>
         <p>
-          Search, filter, and rank influencer profiles using a React frontend
-          connected to a FastAPI backend running on AWS EKS.
+          Search, filter, and rank influencer profiles using a React frontend,
+          FastAPI backend, PostgreSQL RDS, Docker, EKS, and Terraform.
         </p>
       </section>
 
@@ -156,6 +206,47 @@ const fetchMetrics = () => {
 
         <button onClick={handleSearch}>Search</button>
         <button onClick={handleReset}>Reset</button>
+      </section>
+
+      <section className="charts">
+        <div className="chart-card">
+          <h2>Followers by Platform</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={followersByPlatform}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="platform" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="followers" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card">
+          <h2>Average Engagement by Niche</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={engagementByNiche}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="niche" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="engagement" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card">
+          <h2>Campaign Price by Creator</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={priceByCreator}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="price" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </section>
 
       <section className="results-header">
